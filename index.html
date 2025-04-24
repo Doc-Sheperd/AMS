@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor de Sensores</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 60px 20px 20px 20px;
+      background-color: #f2f2f2;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 850px;
+    }
+    .card {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-radius: 10px;
+      color: white;
+      font-size: 13px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .card img {
+      width: 30px;
+      height: 30px;
+      margin-right: 8px;
+    }
+    .temp-air { background-color: #ff9800; }
+    .hum-air  { background-color: #f44336; }
+    .temp-gnd { background-color: #4caf50; }
+    .hum-gnd  { background-color: #ffeb3b; color: #000; }
+    .status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+    .status.on { background-color: #4caf50; color: white; }
+    .status.off { background-color: #f44336; color: white; }
+    #lastUpdate {
+      margin-top: 15px;
+      background: #ccc;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 12px;
+      width: 100%;
+      max-width: 1000px;
+    }
+    canvas {
+      max-height: 140px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Lecturas del ESP32</h2>
+  <div class="container">
+    <div class="cards">
+      <div class="card temp-air">
+        <img src="https://cdn-icons-png.flaticon.com/512/1684/1684375.png" alt="Temp Aire" />
+        <span>Temperatura Aire: <span id="tempAire">---</span> °C</span>
+      </div>
+      <div class="card temp-gnd">
+        <img src="https://cdn-icons-png.flaticon.com/512/728/728093.png" alt="Temp Suelo" />
+        <span>Temperatura Suelo: <span id="tempSuelo">---</span> °C</span>
+      </div>
+      <div class="card hum-air">
+        <img src="https://cdn-icons-png.flaticon.com/512/728/728093.png" alt="Hum Aire" />
+        <span>Humedad Aire: <span id="humAire">---</span> %</span>
+      </div>
+      <div class="card hum-gnd">
+        <img src="https://cdn-icons-png.flaticon.com/512/728/728093.png" alt="Hum Suelo" />
+        <span>Humedad Suelo: <span id="humSuelo">---</span> %</span>
+      </div>
+    </div>
+    <div class="charts">
+      <div class="chart-grid">
+        <canvas id="chart1"></canvas>
+        <canvas id="chart3"></canvas>
+        <canvas id="chart2"></canvas>
+        <canvas id="chart4"></canvas>
+      </div>
+      <div id="lastUpdate">Última actualización: ---</div>
+    </div>
+  </div>
+  <div id="status" class="status off">Servidor OFF</div>
+
+  <script>
+    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+
+    let buffer = {
+      tempAire: [], humAire: [], tempSuelo: [], humSuelo: []
+    };
+    let charts = [];
+
+    function updateStatus(connected) {
+      const statusEl = document.getElementById("status");
+      if (connected) {
+        statusEl.className = "status on";
+        statusEl.innerText = "Servidor ON";
+      } else {
+        statusEl.className = "status off";
+        statusEl.innerText = "Servidor OFF";
+      }
+    }
+
+    function createChart(ctx, label) {
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: label,
+            data: [],
+            borderColor: 'black',
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          animation: false,
+          scales: {
+            x: { display: true },
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function updateCharts() {
+      const now = new Date();
+      const label = now.toLocaleTimeString();
+      document.getElementById("lastUpdate").innerText = `Última actualización: ${label}`;
+
+      Object.keys(buffer).forEach((key, index) => {
+        const avg = buffer[key].reduce((a,b)=>a+b, 0) / buffer[key].length || 0;
+        charts[index].data.labels.push(label);
+        charts[index].data.datasets[0].data.push(avg);
+        charts[index].update();
+        buffer[key] = [];
+      });
+    }
+
+    function resetChartsDaily() {
+      charts.forEach(chart => {
+        chart.data.labels = [];
+        chart.data.datasets[0].data = [];
+        chart.update();
+      });
+    }
+
+    client.on("connect", () => {
+      updateStatus(true);
+      client.subscribe("Fierroo");
+    });
+
+    client.on("offline", () => updateStatus(false));
+    client.on("reconnect", () => updateStatus(false));
+    client.on("close", () => updateStatus(false));
+
+    client.on("message", (_, message) => {
+      const parts = message.toString().split(',');
+      const [tA, hA, tS, hS] = parts.map(parseFloat);
+
+      document.getElementById("tempAire").innerText = tA.toFixed(1);
+      document.getElementById("humAire").innerText = hA.toFixed(1);
+      document.getElementById("tempSuelo").innerText = tS.toFixed(1);
+      document.getElementById("humSuelo").innerText = hS.toFixed(1);
+
+      buffer.tempAire.push(tA);
+      buffer.humAire.push(hA);
+      buffer.tempSuelo.push(tS);
+      buffer.humSuelo.push(hS);
+    });
+
+    window.onload = () => {
+      charts.push(createChart(document.getElementById("chart1"), "Temp Aire"));
+      charts.push(createChart(document.getElementById("chart2"), "Hum Aire"));
+      charts.push(createChart(document.getElementById("chart3"), "Temp Suelo"));
+      charts.push(createChart(document.getElementById("chart4"), "Hum Suelo"));
+      setInterval(updateCharts, 1200000); // Cada 20 min
+
+      const now = new Date();
+      const millisTillMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5) - now;
+      setTimeout(() => {
+        resetChartsDaily();
+        setInterval(resetChartsDaily, 86400000); // Cada 24h
+      }, millisTillMidnight);
+    }
+  </script>
+</body>
+</html>
