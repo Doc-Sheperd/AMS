@@ -104,11 +104,11 @@
     function updateStatus(connected) {
       const overlay = document.getElementById("overlay");
       if (connected) {
-        overlay.style.display = "none";
+        overlay.style.display = "none";  // Ocultar la capa difusa cuando el servidor está encendido
         serverConnected = true;
         client.subscribe("Derek_clase"); // Empieza a suscribirse al topic solo cuando el servidor esté encendido
       } else {
-        overlay.style.display = "flex";
+        overlay.style.display = "flex";  // Mostrar la capa difusa cuando el servidor está apagado
         serverConnected = false;
       }
     }
