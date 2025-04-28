@@ -49,7 +49,14 @@
       background-color: #2196f3;
       color: white;
     }
-    /* Pantalla difusa cuando el servidor está apagado */
+
+    .charts {
+      max-width: 900px;
+      margin: 40px auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
     .overlay {
       position: fixed;
       top: 0;
@@ -77,10 +84,12 @@
     <div class="card hum-gnd">Humedad Suelo: <span id="humSuelo">---</span> %</div>
   </div>
 
-  <div id="lastUpdate" class="last-update">Última actualización: ---</div>
-
-  <!-- Overlay difuso cuando el servidor está apagado -->
-  <div id="overlay" class="overlay">Servidor Apagado. Intentando conexión...</div>
+  <div class="charts">
+    <canvas id="chartTempAire"></canvas>
+    <canvas id="chartHumAire"></canvas>
+    <canvas id="chartTempSuelo"></canvas>
+    <canvas id="chartHumSuelo"></canvas>
+  </div>
 
   <script>
     const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
@@ -89,19 +98,7 @@
     let humAireData = [];
     let tempSueloData = [];
     let humSueloData = [];
-    let lastUpdateTime = null;
-    let serverConnected = false;
-
-    function updateLastUpdate() {
-      const now = new Date();
-      const diff = now - (lastUpdateTime || now);
-      const minutes = Math.floor(diff / 60000);
-      if (!lastUpdateTime) {
-        document.getElementById("lastUpdate").innerText = "Última actualización: No hay datos";
-      } else {
-        document.getElementById("lastUpdate").innerText = `Última actualización: hace ${minutes} minutos`;
-      }
-    }
+    let serverConnected = true;
 
     function updateStatus(connected) {
       const overlay = document.getElementById("overlay");
@@ -119,19 +116,21 @@
       if (tempAireData.length > 0) {
         const promedio = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-        document.getElementById("tempAire").innerText = promedio(tempAireData).toFixed(1);
-        document.getElementById("humAire").innerText = promedio(humAireData).toFixed(1);
-        document.getElementById("tempSuelo").innerText = promedio(tempSueloData).toFixed(1);
-        document.getElementById("humSuelo").innerText = promedio(humSueloData).toFixed(1);
+        const tempAireProm = promedio(tempAireData).toFixed(1);
+        const humAireProm = promedio(humAireData).toFixed(1);
+        const tempSueloProm = promedio(tempSueloData).toFixed(1);
+        const humSueloProm = promedio(humSueloData).toFixed(1);
 
-        // Limpiar arreglos para el siguiente ciclo de 20 min
+        document.getElementById("tempAire").innerText = tempAireProm;
+        document.getElementById("humAire").innerText = humAireProm;
+        document.getElementById("tempSuelo").innerText = tempSueloProm;
+        document.getElementById("humSuelo").innerText = humSueloProm;
+
+        // Limpiar arreglos
         tempAireData = [];
         humAireData = [];
         tempSueloData = [];
         humSueloData = [];
-
-        lastUpdateTime = new Date();
-        updateLastUpdate();
       }
     }
 
@@ -162,10 +161,6 @@
         document.getElementById("humAire").innerText = humAire.toFixed(1);
         document.getElementById("tempSuelo").innerText = tempSuelo.toFixed(1);
         document.getElementById("humSuelo").innerText = humSuelo.toFixed(1);
-
-        // Actualizar el tiempo de la última actualización
-        lastUpdateTime = new Date();
-        updateLastUpdate();
       }
     });
 
@@ -175,9 +170,6 @@
         calcularPromedios();
       }
     }, 20 * 60 * 1000);
-
-    // Actualizar el contador de "última actualización" cada minuto
-    setInterval(updateLastUpdate, 60 * 1000);
   </script>
 </body>
 </html>
