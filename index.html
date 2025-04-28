@@ -28,12 +28,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 15px;
+      padding: 1px;
       border-radius: 10px;
       color: white;
       font-size: 16px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      height: 100px;
+      height: 50px;
     }
     .temp-air { background-color: #ff9800; }
     .hum-air  { background-color: #f44336; }
@@ -56,13 +56,15 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.7);
       display: none;
       justify-content: center;
       align-items: center;
       color: white;
-      font-size: 20px;
+      font-size: 22px;
       text-align: center;
+      z-index: 9999;
+      flex-direction: column;
     }
   </style>
 </head>
@@ -87,28 +89,28 @@
     let humAireData = [];
     let tempSueloData = [];
     let humSueloData = [];
-    let lastUpdateTime = new Date();
+    let lastUpdateTime = null;
     let serverConnected = false;
 
     function updateLastUpdate() {
       const now = new Date();
-      const diff = now - lastUpdateTime; // Diferencia en milisegundos
-      const minutes = Math.floor(diff / 60000); // Convertir a minutos
-      if (tempAireData.length === 0) {
+      const diff = now - (lastUpdateTime || now);
+      const minutes = Math.floor(diff / 60000);
+      if (!lastUpdateTime) {
         document.getElementById("lastUpdate").innerText = "Última actualización: No hay datos";
       } else {
-        document.getElementById("lastUpdate").innerText = `Última actualización: ${minutes} minutos`;
+        document.getElementById("lastUpdate").innerText = `Última actualización: hace ${minutes} minutos`;
       }
     }
 
     function updateStatus(connected) {
       const overlay = document.getElementById("overlay");
       if (connected) {
-        overlay.style.display = "none";  // Ocultar la capa difusa cuando el servidor está encendido
+        overlay.style.display = "none";
         serverConnected = true;
-        client.subscribe("Derek_clase"); // Empieza a suscribirse al topic solo cuando el servidor esté encendido
+        client.subscribe("Derek_clase");
       } else {
-        overlay.style.display = "flex";  // Mostrar la capa difusa cuando el servidor está apagado
+        overlay.style.display = "flex";
         serverConnected = false;
       }
     }
@@ -128,8 +130,8 @@
         tempSueloData = [];
         humSueloData = [];
 
-        // Actualizar tiempo de la última actualización
         lastUpdateTime = new Date();
+        updateLastUpdate();
       }
     }
 
@@ -145,20 +147,37 @@
       console.log("Mensaje recibido:", message.toString());
       const parts = message.toString().split(',');
       if (parts.length === 4) {
-        tempAireData.push(parseFloat(parts[0]));
-        humAireData.push(parseFloat(parts[1]));
-        tempSueloData.push(parseFloat(parts[2]));
-        humSueloData.push(parseFloat(parts[3]));
+        const tempAire = parseFloat(parts[0]);
+        const humAire = parseFloat(parts[1]);
+        const tempSuelo = parseFloat(parts[2]);
+        const humSuelo = parseFloat(parts[3]);
+
+        tempAireData.push(tempAire);
+        humAireData.push(humAire);
+        tempSueloData.push(tempSuelo);
+        humSueloData.push(humSuelo);
+
+        // Actualizar inmediatamente los valores en pantalla
+        document.getElementById("tempAire").innerText = tempAire.toFixed(1);
+        document.getElementById("humAire").innerText = humAire.toFixed(1);
+        document.getElementById("tempSuelo").innerText = tempSuelo.toFixed(1);
+        document.getElementById("humSuelo").innerText = humSuelo.toFixed(1);
+
+        // Actualizar el tiempo de la última actualización
+        lastUpdateTime = new Date();
+        updateLastUpdate();
       }
     });
 
-    // Calcular promedios cada 20 minutos (20 * 60 * 1000 ms)
+    // Calcular promedios cada 20 minutos
     setInterval(() => {
       if (serverConnected) {
         calcularPromedios();
-        updateLastUpdate();
       }
     }, 20 * 60 * 1000);
+
+    // Actualizar el contador de "última actualización" cada minuto
+    setInterval(updateLastUpdate, 60 * 1000);
   </script>
 </body>
 </html>
