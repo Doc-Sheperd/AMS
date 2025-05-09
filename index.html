@@ -1,48 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="description" content="" />
-        <meta name="author" content="" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Monitor de Sensores</title>
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
   <link href="css/styles.css" rel="stylesheet" />
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-        .columna
-    {float:left;
-    width:40%;
-    border:0px solid;
-
-    }
-    @media (max-width: 780px) {
-    .columna {float:none;width:100%;}
-    }
     body {
       font-family: Arial, sans-serif;
-      /*margin: 60px 20px 20px 20px;*/
       background-color: #f5f5f5;
-      position: relative;
     }
     h2 {
       text-align: center;
-      margin-bottom: 40px;
+      margin: 40px 0 20px;
     }
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 20px;
       width: 100%;
-      max-width: 500px;
-      margin: 0 auto;
+      max-width: 600px;
+      margin: auto;
     }
     .card {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px;
+      padding: 30px;
       border-radius: 10px;
       color: white;
       font-size: 16px;
@@ -53,148 +40,63 @@
     .hum-air  { background-color: #f44336; }
     .temp-gnd { background-color: #4caf50; }
     .hum-gnd  { background-color: #2196f3; }
-    .last-update {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-weight: bold;
-      background-color: #2196f3;
-      color: white;
-    }
-
-    .charts {
-      max-width: 900px;
-      margin: 40px auto;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 30px;
-    }
   </style>
 </head>
-<body class="d-flex flex-column h-100">
-  <main class="flex-shrink-0">
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-      <div class="container px-5">
-          <a class="navbar-brand">Menu</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
-          <div class="collapse navbar-collapse" id="navbarSupportedContent">
-              <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                  <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
-              </ul>
-          </div>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container px-5">
+      <a class="navbar-brand">Menu</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
+        </ul>
       </div>
-   </nav>
+    </div>
+  </nav>
 
-    <header class="bg-primary py-2 mt-6">
-      <div class="container px-5">
-          <div class="row gx-5 align-items-center justify-content-center">
-              <div class="col-lg-8 col-xl-7 col-xxl-6">
-                  <div class="my-5 text-center text-xl-start">
-                      <h1 class="display-6 fw-bolder text-white mb-2">Expo IBERO</h1>
-                      <p id="resumen" class="display-8 fw-normal text-white-50 mb-4">Departamento de Ciencias e Ingenierías | Universidad Iberoamericana Puebla, México.</p>
-                  </div>
-              </div>
-          </div>
+  <header class="bg-primary py-4 mt-5">
+    <div class="container px-5">
+      <div class="text-center">
+        <h1 class="display-6 fw-bold text-white">Expo IBERO</h1>
+        <p class="text-white-50">Departamento de Ciencias e Ingenierías | Universidad Iberoamericana Puebla, México.</p>
       </div>
+    </div>
   </header>
-  <h2 class="my-5">Lecturas del ESP32</h2>
-  <div class="cards">
-    <div class="card temp-air">Temperatura Aire: <span id="tempAire">---</span> °C</div>
-    <div class="card hum-air">Humedad Aire: <span id="humAire">---</span> %</div>
-    <div class="card temp-gnd">Temperatura Suelo: <span id="tempSuelo">---</span> °C</div>
-    <div class="card hum-gnd">Humedad Suelo: <span id="humSuelo">---</span> %</div>
-  </div>
 
-  <div class="charts">
-    <canvas id="chartTempAire"></canvas>
-    <canvas id="chartHumAire"></canvas>
-    <canvas id="chartTempSuelo"></canvas>
-    <canvas id="chartHumSuelo"></canvas>
-  </div>
+  <main class="container mt-5">
+    <h2>Lecturas del ESP32</h2>
+    <div class="cards">
+      <div class="card temp-air">Temperatura Aire: <span id="tempAire">---</span> °C</div>
+      <div class="card hum-air">Humedad Aire: <span id="humAire">---</span> %</div>
+      <div class="card temp-gnd">Temperatura Suelo: <span id="tempSuelo">---</span> °C</div>
+      <div class="card hum-gnd">Humedad Suelo: <span id="humSuelo">---</span> %</div>
+    </div>
+  </main>
 
   <script>
     const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
-
-    let tempAireData = [];
-    let humAireData = [];
-    let tempSueloData = [];
-    let humSueloData = [];
-    let serverConnected = true;
-
-    function updateStatus(connected) {
-      const overlay = document.getElementById("overlay");
-      if (connected) {
-        overlay.style.display = "none";
-        serverConnected = true;
-        client.subscribe("Derek_clase");
-      } else {
-        overlay.style.display = "flex";
-        serverConnected = false;
-      }
-    }
-
-    function calcularPromedios() {
-      if (tempAireData.length > 0) {
-        const promedio = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
-
-        const tempAireProm = promedio(tempAireData).toFixed(1);
-        const humAireProm = promedio(humAireData).toFixed(1);
-        const tempSueloProm = promedio(tempSueloData).toFixed(1);
-        const humSueloProm = promedio(humSueloData).toFixed(1);
-
-        document.getElementById("tempAire").innerText = tempAireProm;
-        document.getElementById("humAire").innerText = humAireProm;
-        document.getElementById("tempSuelo").innerText = tempSueloProm;
-        document.getElementById("humSuelo").innerText = humSueloProm;
-
-        // Limpiar arreglos
-        tempAireData = [];
-        humAireData = [];
-        tempSueloData = [];
-        humSueloData = [];
-      }
-    }
+    const topic = "Derek_clase";
 
     client.on("connect", () => {
-      updateStatus(true);
+      console.log("Conectado al broker MQTT");
+      client.subscribe(topic);
     });
-
-    client.on("offline", () => updateStatus(false));
-    client.on("reconnect", () => updateStatus(false));
-    client.on("close", () => updateStatus(false));
 
     client.on("message", (topic, message) => {
       console.log("Mensaje recibido:", message.toString());
       const parts = message.toString().split(',');
       if (parts.length === 4) {
-        const tempAire = parseFloat(parts[0]);
-        const humAire = parseFloat(parts[1]);
-        const tempSuelo = parseFloat(parts[2]);
-        const humSuelo = parseFloat(parts[3]);
+        const [tempA, humA, tempS, humS] = parts.map(parseFloat);
 
-        tempAireData.push(tempAire);
-        humAireData.push(humAire);
-        tempSueloData.push(tempSuelo);
-        humSueloData.push(humSuelo);
-
-        // Actualizar inmediatamente los valores en pantalla
-        document.getElementById("tempAire").innerText = tempAire.toFixed(1);
-        document.getElementById("humAire").innerText = humAire.toFixed(1);
-        document.getElementById("tempSuelo").innerText = tempSuelo.toFixed(1);
-        document.getElementById("humSuelo").innerText = humSuelo.toFixed(1);
+        document.getElementById("tempAire").innerText = tempA.toFixed(1);
+        document.getElementById("humAire").innerText = humA.toFixed(1);
+        document.getElementById("tempSuelo").innerText = tempS.toFixed(1);
+        document.getElementById("humSuelo").innerText = humS.toFixed(1);
       }
     });
-
-    // Calcular promedios cada 20 minutos
-    setInterval(() => {
-      if (serverConnected) {
-        calcularPromedios();
-      }
-    }, 20 * 60 * 1000);
   </script>
-  </main>
 </body>
 </html>
